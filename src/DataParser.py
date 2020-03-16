@@ -1,5 +1,7 @@
 from pathlib import Path
 from typing import NamedTuple, List, Union
+
+import numpy
 import scipy.io.wavfile
 import numpy as np
 import os
@@ -20,6 +22,9 @@ class DataParser:
     # Only files with this sample rate are used as training and validation data (which basically are all files except 1)
     SELECTION_SAMPLE_RATE = 16000
 
+    # The minimum standard deviation that a sound fragment should have
+    MINIMUM_STANDARD_DEVIATION = 0.01
+
     @classmethod
     def parse(self) -> List[Raw_data]:
         data = []
@@ -29,6 +34,6 @@ class DataParser:
             for file in os.listdir(folder_path):
                 file_path = folder_path + "/" + file
                 sample_rate, time_series = scipy.io.wavfile.read(file_path)
-                if sample_rate != self.SELECTION_SAMPLE_RATE:
+                if sample_rate == self.SELECTION_SAMPLE_RATE and np.std(time_series) >= self.MINIMUM_STANDARD_DEVIATION:
                     data.append(Raw_data(recognize_word, time_series))
         return data
