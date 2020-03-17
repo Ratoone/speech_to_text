@@ -31,7 +31,11 @@ class DataFilter:
             largest_part = self.get_largest_part(0, cut_off_pitch_diff, pitch_indices, [])
             start_index = largest_part[0]
             end_index = largest_part[-1] + 1
-            filtered_data.append(Raw_data(data.word, data.time_series[start_index:end_index]))
+            if end_index - start_index < 400:
+                filtered_data.append(data)
+            else:
+                filtered_data.append(Raw_data(data.word, data.time_series[start_index:end_index]))
+        return filtered_data
 
     @classmethod
     def get_largest_part(self, start_index: int, cut_off_pitch_diff: float, pitch_indices: List[int],
