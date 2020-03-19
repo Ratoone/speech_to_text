@@ -1,10 +1,10 @@
-from src.DataExtractor import DataExtractor
+from src.FeatureExtractor import FeatureExtractor
 import numpy as np
 import os
 
 def get_data(word: str):
     results = []
-    folder_path = DataExtractor.DATA_FOLDER + word
+    folder_path = FeatureExtractor.DATA_FOLDER + word
     for file in os.listdir(folder_path):
         file_path = folder_path + "/" + file
         if file_path.endswith(".npy"):

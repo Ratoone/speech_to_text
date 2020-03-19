@@ -7,7 +7,7 @@ import scipy.stats
 import scipy.io.wavfile
 import threading
 
-class DataExtractor:
+class FeatureExtractor:
     # The folder with all sound fragments
     DATA_FOLDER = str(Path(os.getcwd()).parent.absolute()) + "/dataset/"
 
@@ -90,4 +90,4 @@ class DataExtractor:
         return features
 
 if __name__ == "__main__":
-    DataExtractor().run()
+    FeatureExtractor().run()
