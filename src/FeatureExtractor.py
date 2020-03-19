@@ -16,9 +16,6 @@ class FeatureExtractor:
                  "nine", "no", "off", "on", "one", "right", "seven", "sheila", "six", "stop", "three", "tree", "two",
                  "up", "wow", "yes", "zero"]
 
-    # All words that we try to recognize with our machine learning algorithm
-    RECOGNIZE_WORDS = {"yes", "no", "up", "down", "left", "right", "on", "off", "stop", "go"}
-
     # Only files with this sample rate are used as training and validation data (which basically are all files except 1)
     SELECTION_SAMPLE_RATE = 16000
 
