@@ -52,6 +52,7 @@ class DataExtractor:
                 self.extract_file_if_possible(file_path)
                 if self.forced_quit:
                     return
+        os._exit(os.EX_OK)
 
     @classmethod
     def extract_file_if_possible(self, file_path: str):
