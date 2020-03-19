@@ -56,15 +56,15 @@ class DataExtractor:
 
     @classmethod
     def extract_file_if_possible(self, file_path: str):
-        if file_path.endswith(".wav"): # Check if the file is not a bin file
-            bin_file_path = file_path.replace(".wav", ".npy")
-            if not os.path.isfile(bin_file_path): # Only extract the file if it hasn't yet been extracted
+        if file_path.endswith(".wav"): # Check if the file is not a npy file
+            npy_file_path = file_path.replace(".wav", ".npy")
+            if not os.path.isfile(npy_file_path): # Only extract the file if it hasn't yet been extracted
                 sample_rate, time_series = scipy.io.wavfile.read(file_path)
                 if sample_rate == self.SELECTION_SAMPLE_RATE:
-                    self.extract(time_series, bin_file_path.replace(".npy", ""))
+                    self.extract(time_series, npy_file_path.replace(".npy", ""))
 
     @classmethod
-    def extract(self, time_series: List[float], bin_file_path: str):
+    def extract(self, time_series: List[float], npy_file_path: str):
         features = self.statistics(time_series)
         for difference in range(self.DIFFERENCING_STEPS, self.MAXIMUM_DIFFERENCING + 1, self.DIFFERENCING_STEPS):
             try:
@@ -73,7 +73,7 @@ class DataExtractor:
             except Exception as e:
                 return
 
-        np.save(bin_file_path, np.array(features))
+        np.save(npy_file_path, np.array(features))
 
     @classmethod
     def differencing(self, time_series: List[float], difference: int) -> List[float]:
@@ -89,4 +89,5 @@ class DataExtractor:
             features.append(sc.stats.trim_mean(features, tm))
         return features
 
-DataExtractor().run()
+if __name__ == "__main__":
+    DataExtractor().run()
