@@ -45,5 +45,4 @@ class FeatureSelector:
         for i, d in enumerate(data):
             data[i] = Datarow(pca.transform(np.array([d.input]))[0], d.output)
 
-        # Polynomial Expansion
         return data
