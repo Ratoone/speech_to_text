@@ -1,0 +1,5 @@
+librosa
+tqdm
+scipy
+scikit-learn
+numpy
