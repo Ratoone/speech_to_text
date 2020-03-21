@@ -1,3 +1,5 @@
+from typing import Optional
+
 import librosa
 import numpy as np
 
@@ -19,7 +21,7 @@ class Preprocessing:
         self.discard_short_entries = discard_short_entries
         self.duration = 1  # the time series all have one second
 
-    def preprocess(self, file_path: str) -> np.ndarray:
+    def preprocess(self, file_path: str) -> Optional[np.ndarray]:
         """
         Reads the input wav file and returns a processed signal
         :param file_path: the full path of the file
