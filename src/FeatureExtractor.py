@@ -7,14 +7,20 @@ import scipy.stats
 import scipy.io.wavfile
 import threading
 
+import tqdm as tqdm
+
+from src.Preprocessing import Preprocessing
+
+
 class FeatureExtractor:
     # The folder with all sound fragments
     DATA_FOLDER = str(Path(os.getcwd()).parent.absolute()) + "/dataset/"
 
     # All words in the dataset for which we have sound fragments
-    ALL_WORDS = ["bed", "bird", "cat", "dog", "down", "eight", "five", "four", "go", "happy", "house", "left", "marvin",
-                 "nine", "no", "off", "on", "one", "right", "seven", "sheila", "six", "stop", "three", "tree", "two",
-                 "up", "wow", "yes", "zero"]
+    # ALL_WORDS = ["bed", "bird", "cat", "dog", "down", "eight", "five", "four", "go", "happy", "house", "left", "marvin",
+    #              "nine", "no", "off", "on", "one", "right", "seven", "sheila", "six", "stop", "three", "tree", "two",
+    #              "up", "wow", "yes", "zero"]
+    ALL_WORDS = ["yes", "no"]
 
     # Only files with this sample rate are used as training and validation data (which basically are all files except 1)
     SELECTION_SAMPLE_RATE = 16000
@@ -36,6 +42,8 @@ class FeatureExtractor:
 
     forced_quit = False
 
+    preprocessing = Preprocessing()
+
     @classmethod
     def run(self):
         thread = threading.Thread(target=self.extract_files, args=())
@@ -45,9 +53,9 @@ class FeatureExtractor:
 
     @classmethod
     def extract_files(self):
-        for word in self.ALL_WORDS:
+        for index, word in enumerate(self.ALL_WORDS):
             folder_path = self.DATA_FOLDER + word
-            for file in os.listdir(folder_path):
+            for file in tqdm.tqdm(os.listdir(folder_path), desc="Extracting features for word \"{}\" ({}/{})".format(word, index + 1, len(self.ALL_WORDS))):
                 file_path = folder_path + "/" + file
                 self.extract_file_if_possible(file_path)
                 if self.forced_quit:
@@ -59,8 +67,8 @@ class FeatureExtractor:
         if file_path.endswith(".wav"): # Check if the file is not a npy file
             npy_file_path = file_path.replace(".wav", ".npy")
             if not os.path.isfile(npy_file_path): # Only extract the file if it hasn't yet been extracted
-                sample_rate, time_series = scipy.io.wavfile.read(file_path)
-                if sample_rate == self.SELECTION_SAMPLE_RATE:
+                time_series = self.preprocessing.preprocess(file_path)
+                if time_series is not None:
                     self.extract(time_series, npy_file_path.replace(".npy", ""))
 
     @classmethod
