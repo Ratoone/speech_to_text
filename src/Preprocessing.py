@@ -2,6 +2,7 @@ from typing import Optional
 
 import librosa
 import numpy as np
+from scipy import signal
 
 
 class Preprocessing:
@@ -40,4 +41,12 @@ class Preprocessing:
 
         return time_series
 
+    def spectogram(self, audio, window_size, step_size: Optional[int] = None, eps: float = 1e-30):
+        frequencies, _, spectogram = signal.spectrogram(audio,
+                                                        fs=self.expected_sample_rate,
+                                                        window="hann",
+                                                        nperseg=window_size,
+                                                        noverlap=step_size
+                                                        )
+        return np.log(spectogram.T + eps)
 
