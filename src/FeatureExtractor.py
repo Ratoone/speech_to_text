@@ -25,11 +25,14 @@ class FeatureExtractor:
     # All the trimmed means as features
     TRIMMED_MEANS = [0.015625, 0.0625, 0.25]
 
-    # The maximum possible differencing used
-    MAXIMUM_DIFFERENCING = 600
+    # The size of every fourier transform window
+    FOURIER_WINDOW_SIZE = 600
 
-    # The differencing step size (the difference between succeeding and preceeding differencing values)
-    DIFFERENCING_STEPS = 10
+    # How much the fourier window is shifted everytime
+    FOURIER_WINDOW_SHIFTS = 10
+
+    # Apply a max on the amplitudes in every group of these sizes
+    FREQUENCY_MERGE_STEPS = 5
 
     forced_quit = False
 
@@ -62,29 +65,37 @@ class FeatureExtractor:
 
     @classmethod
     def extract(self, time_series: List[float], npy_file_path: str):
-        features = self.statistics(time_series)
-        for difference in range(self.DIFFERENCING_STEPS, self.MAXIMUM_DIFFERENCING + 1, self.DIFFERENCING_STEPS):
-            try:
-                statistics = self.statistics(self.differencing(time_series, difference))
-                features.extend(statistics)
-            except Exception as e:
-                return
+        rounded_size = len(time_series) - (len(time_series) % self.FOURIER_WINDOW_SHIFTS)
+        time_series = time_series[:rounded_size]
+        features = []
+        for start in range(0, len(time_series) + 1 - self.FOURIER_WINDOW_SIZE, self.FOURIER_WINDOW_SHIFTS):
+            features.append(self.dft_window(time_series[start:(start + self.FOURIER_WINDOW_SIZE)]))
 
-        np.save(npy_file_path, np.array(features))
-
-    @classmethod
-    def differencing(self, time_series: List[float], difference: int) -> List[float]:
-        with np.errstate(all = "raise"):
-            return [y2 - y1 for y1, y2 in zip(time_series, time_series[difference:])]
+        stats = self.statistics(np.array(features))
+        np.save(npy_file_path, stats)
 
     @classmethod
-    def statistics(self, time_series: List[float]):
-        ts = np.array(time_series)
-        features = [np.mean(ts), np.std(ts), sc.stats.skew(ts), sc.stats.kurtosis(ts)]
-        features.extend(np.quantile(ts, self.QUANTILES))
+    def dft_window(self, window: List[float]) -> np.array:
+        fourier = np.fft.fft(window)
+        result = []
+        for i in range(0, len(window), self.FREQUENCY_MERGE_STEPS):
+            maximum = max([np.absolute(f) for f in fourier[i:(i + self.FREQUENCY_MERGE_STEPS)]])
+            result.append(maximum)
+
+        return np.array(result)
+
+    @classmethod
+    def statistics(self, matrix: np.array) -> np.array:
+        features = []
+        features.extend(np.mean(matrix, axis=0))
+        features.extend(np.std(matrix, axis=0))
+        features.extend(sc.stats.skew(matrix, axis=0))
+        features.extend(sc.stats.kurtosis(matrix, axis=0))
+        features.extend(np.quantile(matrix, self.QUANTILES, axis=0).flatten())
         for tm in self.TRIMMED_MEANS:
-            features.append(sc.stats.trim_mean(features, tm))
-        return features
+            features.extend(sc.stats.trim_mean(matrix, tm, axis=0).flatten())
+
+        return np.array(features)
 
 if __name__ == "__main__":
     FeatureExtractor().run()
