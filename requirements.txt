@@ -2,4 +2,5 @@ librosa
 tqdm
 scipy
 scikit-learn
+scikit-image
 numpy
