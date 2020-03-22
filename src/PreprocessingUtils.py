@@ -5,7 +5,7 @@ import numpy as np
 from scipy import signal
 
 
-class Preprocessing:
+class PreprocessingUtils:
     """
     Class for all your preprocessing needs. Will perform resampling and (maybe) filtering
     """

@@ -1,15 +1,14 @@
+import os
+import threading
 from pathlib import Path
 from typing import List
+
 import numpy as np
-import os
 import scipy as sc
 import scipy.stats
-import scipy.io.wavfile
-import threading
-
 import tqdm as tqdm
 
-from src.Preprocessing import Preprocessing
+from src.PreprocessingUtils import PreprocessingUtils
 
 
 class FeatureExtractor:
@@ -42,7 +41,7 @@ class FeatureExtractor:
 
     forced_quit = False
 
-    preprocessing = Preprocessing()
+    preprocessing = PreprocessingUtils(expected_sample_rate=SELECTION_SAMPLE_RATE)
 
     @classmethod
     def run(self):
@@ -75,6 +74,9 @@ class FeatureExtractor:
     def extract(self, time_series: List[float], npy_file_path: str):
         rounded_size = len(time_series) - (len(time_series) % self.FOURIER_WINDOW_SHIFTS)
         time_series = time_series[:rounded_size]
+        spectogram = self.preprocessing.spectogram(time_series,
+                                                   self.FOURIER_WINDOW_SIZE,
+                                                   self.FOURIER_WINDOW_SIZE - self.FOURIER_WINDOW_SHIFTS)
         features = []
         for start in range(0, len(time_series) + 1 - self.FOURIER_WINDOW_SIZE, self.FOURIER_WINDOW_SHIFTS):
             features.append(self.dft_window(time_series[start:(start + self.FOURIER_WINDOW_SIZE)]))
