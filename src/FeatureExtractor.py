@@ -72,8 +72,6 @@ class FeatureExtractor:
 
     @classmethod
     def extract(self, time_series: List[float], npy_file_path: str):
-        rounded_size = len(time_series) - (len(time_series) % self.FOURIER_WINDOW_SHIFTS)
-        time_series = time_series[:rounded_size]
         spectogram = self.preprocessing.log_spectogram(time_series,
                                                        self.SELECTION_SAMPLE_RATE,
                                                        self.FOURIER_WINDOW_SIZE * 2,
@@ -81,16 +79,6 @@ class FeatureExtractor:
         features = self.preprocessing.max_pooling(spectogram, (1, self.FREQUENCY_MERGE_STEPS))
         stats = self.statistics(np.array(features))
         np.save(npy_file_path, stats)
-
-    @classmethod
-    def dft_window(self, window: List[float]) -> np.array:
-        fourier = np.fft.fft(window)
-        result = []
-        for i in range(0, len(window), self.FREQUENCY_MERGE_STEPS):
-            maximum = max([np.absolute(f) for f in fourier[i:(i + self.FREQUENCY_MERGE_STEPS)]])
-            result.append(maximum)
-
-        return np.array(result)
 
     @classmethod
     def statistics(self, matrix: np.array) -> np.array:
