@@ -2,9 +2,11 @@ from typing import Optional
 
 import librosa
 import numpy as np
+import skimage.measure
+from scipy import signal
 
 
-class Preprocessing:
+class PreprocessingUtils:
     """
     Class for all your preprocessing needs. Will perform resampling and (maybe) filtering
     """
@@ -40,4 +42,15 @@ class Preprocessing:
 
         return time_series
 
+    def log_spectogram(self, audio, sample_rate, window_size, step_size: Optional[int] = None, eps: float = 1e-30):
+        frequencies, _, spectogram = signal.spectrogram(audio,
+                                                        fs=sample_rate,
+                                                        window="hann",
+                                                        nperseg=window_size,
+                                                        noverlap=step_size,
+                                                        detrend=False
+                                                        )
+        return np.log(spectogram.T + eps)
 
+    def max_pooling(self, signal_2d: np.ndarray, kernel_size: tuple) -> np.ndarray:
+        return skimage.measure.block_reduce(signal_2d, kernel_size, np.max)

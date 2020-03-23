@@ -1,15 +1,14 @@
+import os
+import threading
 from pathlib import Path
 from typing import List
+
 import numpy as np
-import os
 import scipy as sc
 import scipy.stats
-import scipy.io.wavfile
-import threading
-
 import tqdm as tqdm
 
-from src.Preprocessing import Preprocessing
+from src.PreprocessingUtils import PreprocessingUtils
 
 
 class FeatureExtractor:
@@ -31,15 +30,18 @@ class FeatureExtractor:
     # All the trimmed means as features
     TRIMMED_MEANS = [0.015625, 0.0625, 0.25]
 
-    # The maximum possible differencing used
-    MAXIMUM_DIFFERENCING = 600
+    # The size of every fourier transform window
+    FOURIER_WINDOW_SIZE = 600
 
-    # The differencing step size (the difference between succeeding and preceeding differencing values)
-    DIFFERENCING_STEPS = 10
+    # How much the fourier window is shifted everytime
+    FOURIER_WINDOW_SHIFTS = 10
+
+    # Apply a max on the amplitudes in every group of these sizes
+    FREQUENCY_MERGE_STEPS = 5
 
     forced_quit = False
 
-    preprocessing = Preprocessing()
+    preprocessing = PreprocessingUtils(expected_sample_rate=SELECTION_SAMPLE_RATE)
 
     @classmethod
     def run(self):
@@ -70,29 +72,26 @@ class FeatureExtractor:
 
     @classmethod
     def extract(self, time_series: List[float], npy_file_path: str):
-        features = self.statistics(time_series)
-        for difference in range(self.DIFFERENCING_STEPS, self.MAXIMUM_DIFFERENCING + 1, self.DIFFERENCING_STEPS):
-            try:
-                statistics = self.statistics(self.differencing(time_series, difference))
-                features.extend(statistics)
-            except Exception as e:
-                return
-
-        np.save(npy_file_path, np.array(features))
+        spectogram = self.preprocessing.log_spectogram(time_series,
+                                                       self.SELECTION_SAMPLE_RATE,
+                                                       self.FOURIER_WINDOW_SIZE * 2,
+                                                       self.FOURIER_WINDOW_SIZE * 2 - self.FOURIER_WINDOW_SHIFTS)
+        features = self.preprocessing.max_pooling(spectogram, (1, self.FREQUENCY_MERGE_STEPS))
+        stats = self.statistics(np.array(features))
+        np.save(npy_file_path, stats)
 
     @classmethod
-    def differencing(self, time_series: List[float], difference: int) -> List[float]:
-        with np.errstate(all = "raise"):
-            return [y2 - y1 for y1, y2 in zip(time_series, time_series[difference:])]
-
-    @classmethod
-    def statistics(self, time_series: List[float]):
-        ts = np.array(time_series)
-        features = [np.mean(ts), np.std(ts), sc.stats.skew(ts), sc.stats.kurtosis(ts)]
-        features.extend(np.quantile(ts, self.QUANTILES))
+    def statistics(self, matrix: np.array) -> np.array:
+        features = []
+        features.extend(np.mean(matrix, axis=0))
+        features.extend(np.std(matrix, axis=0))
+        features.extend(sc.stats.skew(matrix, axis=0))
+        features.extend(sc.stats.kurtosis(matrix, axis=0))
+        features.extend(np.quantile(matrix, self.QUANTILES, axis=0).flatten())
         for tm in self.TRIMMED_MEANS:
-            features.append(sc.stats.trim_mean(features, tm))
-        return features
+            features.extend(sc.stats.trim_mean(matrix, tm, axis=0).flatten())
+
+        return np.array(features)
 
 if __name__ == "__main__":
     FeatureExtractor().run()
