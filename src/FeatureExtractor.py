@@ -1,5 +1,6 @@
+import math
 import os
-import threading
+import multiprocessing.process
 from pathlib import Path
 from typing import List
 
@@ -16,10 +17,9 @@ class FeatureExtractor:
     DATA_FOLDER = str(Path(os.getcwd()).parent.absolute()) + "/dataset/"
 
     # All words in the dataset for which we have sound fragments
-    # ALL_WORDS = ["bed", "bird", "cat", "dog", "down", "eight", "five", "four", "go", "happy", "house", "left", "marvin",
-    #              "nine", "no", "off", "on", "one", "right", "seven", "sheila", "six", "stop", "three", "tree", "two",
-    #              "up", "wow", "yes", "zero"]
-    ALL_WORDS = ["yes", "no"]
+    ALL_WORDS = ["bed", "bird", "cat", "dog", "down", "eight", "five", "four", "go", "happy", "house", "left", "marvin",
+                 "nine", "no", "off", "on", "one", "right", "seven", "sheila", "six", "stop", "three", "tree", "two",
+                 "up", "wow", "yes", "zero"]
 
     # Only files with this sample rate are used as training and validation data (which basically are all files except 1)
     SELECTION_SAMPLE_RATE = 16000
@@ -43,25 +43,17 @@ class FeatureExtractor:
 
     preprocessing = PreprocessingUtils(expected_sample_rate=SELECTION_SAMPLE_RATE)
 
-    @classmethod
-    def run(self):
-        thread = threading.Thread(target=self.extract_files, args=())
-        thread.start()
-        input("Press a key to stop the program")
-        self.forced_quit = True
+    def run(self, number_of_parallel_jobs=1):
+        pool = multiprocessing.Pool(processes=number_of_parallel_jobs)
+        for _ in tqdm.tqdm(pool.imap_unordered(self.extract_files, self.ALL_WORDS), total=len(self.ALL_WORDS), desc="Extracting features for words"):
+            pass
 
-    @classmethod
-    def extract_files(self):
-        for index, word in enumerate(self.ALL_WORDS):
-            folder_path = self.DATA_FOLDER + word
-            for file in tqdm.tqdm(os.listdir(folder_path), desc="Extracting features for word \"{}\" ({}/{})".format(word, index + 1, len(self.ALL_WORDS))):
-                file_path = folder_path + "/" + file
-                self.extract_file_if_possible(file_path)
-                if self.forced_quit:
-                    return
-        os._exit(os.EX_OK)
+    def extract_files(self, word):
+        folder_path = self.DATA_FOLDER + word
+        for file in os.listdir(folder_path):
+            file_path = folder_path + "/" + file
+            self.extract_file_if_possible(file_path)
 
-    @classmethod
     def extract_file_if_possible(self, file_path: str):
         if file_path.endswith(".wav"): # Check if the file is not a npy file
             npy_file_path = file_path.replace(".wav", ".npy")
@@ -70,7 +62,6 @@ class FeatureExtractor:
                 if time_series is not None:
                     self.extract(time_series, npy_file_path.replace(".npy", ""))
 
-    @classmethod
     def extract(self, time_series: List[float], npy_file_path: str):
         spectogram = self.preprocessing.log_spectogram(time_series,
                                                        self.SELECTION_SAMPLE_RATE,
@@ -80,7 +71,6 @@ class FeatureExtractor:
         stats = self.statistics(np.array(features))
         np.save(npy_file_path, stats)
 
-    @classmethod
     def statistics(self, matrix: np.array) -> np.array:
         features = []
         features.extend(np.mean(matrix, axis=0))
@@ -93,5 +83,6 @@ class FeatureExtractor:
 
         return np.array(features)
 
+
 if __name__ == "__main__":
-    FeatureExtractor().run()
+    FeatureExtractor().run(8)
