@@ -1,0 +1,8 @@
+keras
+tensorflow == 1.15.2
+librosa
+tqdm
+scipy
+scikit-learn
+scikit-image
+numpy
