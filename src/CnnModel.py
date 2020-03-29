@@ -25,11 +25,7 @@ def generate_model(input_shape, output_length):
     layer = Dropout(0.3)(layer)
     layer = Dense(output_length, activation="softmax")(layer)
 
-    model = Model(inputs=input_layer, outputs=layer)
-
-    # compile model using accuracy to measure model performance
-    model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"])
-    return model
+    return Model(inputs=input_layer, outputs=layer)
 
 
 def get_model(input_shape=None, output_length=None):
@@ -44,6 +40,9 @@ def get_model(input_shape=None, output_length=None):
             f.write(model.to_json())
     if os.path.exists(weights_path):
         model.load_weights(weights_path)
+
+    # compile model using accuracy to measure model performance
+    model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"])
 
     return model
 
@@ -75,20 +74,29 @@ def test_model(x_data, y_data, number_of_words):
     print(sklearn.metrics.accuracy_score(y_data, y_pred.argmax(axis=1)))
 
 
-def get_data(lower_limit, upper_limit):
+def get_data(lower_limit, upper_limit, used_words):
     selection_sample_rate = 16000
     fourier_window_size = 600
     preprocessing = PreprocessingUtils(discard_short_entries=True)
-    # ALL_WORDS = ["yes", "no"]
     all_words = ["bed", "bird", "cat", "dog", "down", "eight", "five", "four", "go", "happy", "house", "left", "marvin",
                  "nine", "no", "off", "on", "one", "right", "seven", "sheila", "six", "stop", "three", "tree", "two",
                  "up", "wow", "yes", "zero"]
+    missing_words_count = len(all_words) - len(used_words)
     data_folder = str(Path(os.getcwd()).parent.absolute()) + "/dataset/"
     x_data = []
     y_data = []
 
     for index, word in enumerate(tqdm.tqdm(all_words, desc="Extracting features")):
         folder_path = data_folder + word
+        if word in used_words:
+            class_number = used_words.index(word)
+            lower_bound = lower_limit
+            upper_bound = upper_limit
+        else:
+            class_number = len(used_words)
+            lower_bound = lower_limit / missing_words_count
+            upper_bound = upper_limit / missing_words_count
+
         num_words = 0
         for file in os.listdir(folder_path):
             file_path = folder_path + "/" + file
@@ -96,26 +104,28 @@ def get_data(lower_limit, upper_limit):
                 continue
 
             num_words += 1
-            if num_words < lower_limit:
+            if num_words < lower_bound:
                 continue
-            if num_words > upper_limit:
+            if num_words > upper_bound:
                 break
 
             time_series = preprocessing.preprocess(file_path)
             if time_series is None:
+                num_words -= 1
                 continue
             spectogram = preprocessing.log_spectogram(time_series,
                                                       selection_sample_rate,
                                                       fourier_window_size // 2,
-                                                      fourier_window_size // 4 + 20)
+                                                      fourier_window_size // 4)
             x_data.append(spectogram)
-            y_data.append(index)
+            y_data.append(class_number)
 
     return np.array(x_data), np.array(y_data)
 
 
 if __name__ == '__main__':
-    # x_data, y_data = get_data(0, 1500)
-    # train_model(x_data, y_data, 30)
-    x_data, y_data = get_data(1500, 2000)
-    test_model(x_data, y_data, 30)
+    words = ["yes", "no", "up", "down", "left", "right", "on", "off", "stop", "go"]
+    # x_data, y_data = get_data(0, 2000, words)
+    # train_model(x_data, y_data, len(words)+1)
+    x_data, y_data = get_data(1500, 2000, words)
+    test_model(x_data, y_data, len(words)+1)
