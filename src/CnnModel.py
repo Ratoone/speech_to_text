@@ -67,11 +67,21 @@ def train_model(x_data: np.ndarray, y_data: np.ndarray, output_size):
                          ])
 
 
-def test_model(x_data, y_data, number_of_words):
-    model = get_model(output_length=number_of_words)
+def test_model(x_data, y_data, labels):
+    model = get_model(output_length=len(labels))
     x_data = x_data.reshape(*x_data.shape, 1)
     y_pred = model.predict(x_data)
-    print(sklearn.metrics.accuracy_score(y_data, y_pred.argmax(axis=1)))
+    import json
+    y_prob = [float(y_pred[row, index]) for row, index in enumerate(y_data)]
+    y_pred = [labels[x] for x in y_pred.argmax(axis=1)]
+    y_data = [labels[x] for x in y_data]
+    data = {}
+    # data["confusion_matrix"] = confusion_matrix
+    data["actual_y"] = y_data
+    data["expected_y"] = y_pred
+    data["likelihood_y"] = y_prob
+    with open("data.json", "w") as f:
+        json.dump(data, f)
 
 
 def get_data(lower_limit, upper_limit, used_words):
@@ -127,5 +137,5 @@ if __name__ == '__main__':
     words = ["yes", "no", "up", "down", "left", "right", "on", "off", "stop", "go"]
     # x_data, y_data = get_data(0, 2000, words)
     # train_model(x_data, y_data, len(words)+1)
-    x_data, y_data = get_data(1500, 2000, words)
-    test_model(x_data, y_data, len(words)+1)
+    x_data, y_data = get_data(2000, 2500, words)
+    test_model(x_data, y_data, words + ['other'])
