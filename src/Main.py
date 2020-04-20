@@ -6,6 +6,16 @@ import random
 
 VALIDATION_RATE = 0.1
 
+def accuracy(confusion_matrix: dict) -> float:
+    correct = 0
+    total = 0
+    for index, value in confusion_matrix.items():
+        total += value
+        if index[0] == index[1]:
+            correct += value
+
+    return correct / total
+
 data = FeatureSelector().select()
 
 # Decide which data is used as validation data and which data as train data
@@ -15,7 +25,7 @@ train_data = data[split_index:]
 validation_data = data[:split_index]
 
 # Do the training of the Naive Bayes classifier
-model = LogisticRegression(solver="lbfgs", max_iter=1000)
+model = LogisticRegression(solver="lbfgs", max_iter=1000, multi_class="ovr")
 train_x = np.array([td.input for td in train_data])
 train_y = np.array([td.output for td in train_data])
 model.fit(train_x, train_y)
@@ -29,3 +39,5 @@ for actual, expected in zip(actual_y, expected_y):
     confusion_matrix[(actual, expected)] = confusion_matrix.get((actual, expected), 0) + 1
 
 print(confusion_matrix)
+print(accuracy(confusion_matrix))
+
